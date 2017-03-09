@@ -1,5 +1,6 @@
 package com.cloudbees.jenkins.plugins.bitbucket.api;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -28,5 +29,7 @@ public interface BitbucketPushEvent {
 
     interface Target {
         String getHash();
+        Date getDate();
+        String getMessage();
     }
 }

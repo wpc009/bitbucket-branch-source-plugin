@@ -139,6 +139,9 @@ public interface BitbucketApi {
     @NonNull
     List<? extends BitbucketBranch> getBranches() throws IOException, InterruptedException;
 
+
+    List<? extends BitbucketTag> getTags() throws IOException, InterruptedException;
+
     /**
      * Resolve the commit object given its hash.
      *

@@ -23,17 +23,7 @@
  */
 package com.cloudbees.jenkins.plugins.bitbucket.client;
 
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketApi;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketBuildStatus;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketCommit;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketException;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketPullRequest;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketRepository;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketRepositoryProtocol;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketRepositoryType;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketRequestException;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketTeam;
-import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketWebHook;
+import com.cloudbees.jenkins.plugins.bitbucket.api.*;
 import com.cloudbees.jenkins.plugins.bitbucket.client.branch.BitbucketCloudBranch;
 import com.cloudbees.jenkins.plugins.bitbucket.client.branch.BitbucketCloudCommit;
 import com.cloudbees.jenkins.plugins.bitbucket.client.pullrequest.BitbucketPullRequestValue;
@@ -44,8 +34,7 @@ import com.cloudbees.jenkins.plugins.bitbucket.client.repository.BitbucketReposi
 import com.cloudbees.jenkins.plugins.bitbucket.client.repository.BitbucketRepositoryHooks;
 import com.cloudbees.jenkins.plugins.bitbucket.client.repository.PaginatedBitbucketRepository;
 import com.cloudbees.jenkins.plugins.bitbucket.client.repository.UserRoleInRepository;
-import com.cloudbees.jenkins.plugins.bitbucket.hooks.BitbucketSCMSourcePushHookReceiver;
-import com.cloudbees.jenkins.plugins.bitbucket.hooks.HookEventType;
+import com.cloudbees.jenkins.plugins.bitbucket.client.tag.BitbucketCloudTag;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -58,8 +47,6 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
@@ -302,6 +289,17 @@ public class BitbucketCloudApiClient implements BitbucketApi {
         String response = getRequest(url);
         try {
             return parseBranchesJson(response);
+        } catch (IOException e) {
+            throw new IOException("I/O error when parsing response from URL: " + url, e);
+        }
+    }
+
+    @Override
+    public List<? extends BitbucketTag> getTags() throws IOException, InterruptedException {
+        String url = V1_API_BASE_URL + this.owner + "/" + this.repositoryName + "/tags";
+        String response = getRequest(url);
+        try {
+            return parseTagsJson(response);
         } catch (IOException e) {
             throw new IOException("I/O error when parsing response from URL: " + url, e);
         }
@@ -667,12 +665,31 @@ public class BitbucketCloudApiClient implements BitbucketApi {
         return postRequest(httppost);
     }
 
+    private List<BitbucketTag> parseTagsJson(String response) throws IOException {
+        List<BitbucketTag> branches = new ArrayList<BitbucketTag>();
+        ObjectMapper mapper = new ObjectMapper();
+        JSONObject obj = JSONObject.fromObject(response);
+        for (Object name : obj.keySet()) {
+            JSONObject jsonBranch =  obj.getJSONObject((String) name);
+            jsonBranch.put("name",name);
+            BitbucketCloudTag b = mapper.readValue(jsonBranch.toString(), BitbucketCloudTag.class);
+            if (b.getName() == null) {
+                // The branch name is null sometimes in API JSON response (unknown reason)
+                b.setName((String) name);
+            }
+            branches.add(b);
+        }
+        return branches;
+    }
+
     private List<BitbucketCloudBranch> parseBranchesJson(String response) throws IOException {
         List<BitbucketCloudBranch> branches = new ArrayList<BitbucketCloudBranch>();
         ObjectMapper mapper = new ObjectMapper();
         JSONObject obj = JSONObject.fromObject(response);
         for (Object name : obj.keySet()) {
-            BitbucketCloudBranch b = mapper.readValue(obj.getJSONObject((String) name).toString(), BitbucketCloudBranch.class);
+            JSONObject jsonBranch =  obj.getJSONObject((String) name);
+            jsonBranch.put("name",name);
+            BitbucketCloudBranch b = mapper.readValue(jsonBranch.toString(), BitbucketCloudBranch.class);
             if (b.getName() == null) {
                 // The branch name is null sometimes in API JSON response (unknown reason)
                 b.setName((String) name);

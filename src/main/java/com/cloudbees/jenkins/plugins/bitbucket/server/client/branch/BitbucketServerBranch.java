@@ -28,7 +28,7 @@ import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketBranch;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BitbucketServerBranch implements BitbucketBranch {
+public class BitbucketServerBranch extends BitbucketBranch {
 
     private String displayId;
 
@@ -66,6 +66,27 @@ public class BitbucketServerBranch implements BitbucketBranch {
 
     public void setRawNode(String latestCommit) {
         this.latestCommit = latestCommit;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return (this.getName()+ this.getRawNode()).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return this.getName() + ":" + this.getRawNode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof BitbucketBranch){
+            BitbucketBranch b = (BitbucketBranch) obj;
+            return this.hashCode() == b.hashCode();
+        }else{
+            return false;
+        }
     }
 
 }

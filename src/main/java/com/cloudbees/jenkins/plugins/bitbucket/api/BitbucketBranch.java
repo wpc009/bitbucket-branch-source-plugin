@@ -28,16 +28,37 @@ package com.cloudbees.jenkins.plugins.bitbucket.api;
  *
  * It's used to represent branches to be built and source branches for pull requests.
  */
-public interface BitbucketBranch {
+public abstract class BitbucketBranch {
 
     /**
      * @return the head commit node of this branch
      */
-    String getRawNode();
+    abstract public String getRawNode();
 
     /**
      * @return the branch name
      */
-    String getName();
+    abstract public String getName();
+
+    @Override
+    public int hashCode() {
+        return (this.getRawNode() + this.getRawNode()).hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return this.getName() + ":" + this.getRawNode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof BitbucketBranch){
+            BitbucketBranch b = (BitbucketBranch) obj;
+            return this.hashCode() == b.hashCode();
+        }else{
+            return false;
+        }
+    }
+
 
 }

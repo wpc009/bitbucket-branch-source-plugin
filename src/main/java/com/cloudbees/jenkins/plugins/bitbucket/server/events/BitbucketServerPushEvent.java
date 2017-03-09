@@ -29,6 +29,7 @@ import com.cloudbees.jenkins.plugins.bitbucket.client.events.BitbucketCloudPushE
 import com.cloudbees.jenkins.plugins.bitbucket.server.client.repository.BitbucketServerRepository;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -151,6 +152,8 @@ public class BitbucketServerPushEvent implements BitbucketPushEvent{
     public static class TargetImpl implements Target {
 
         private String hash;
+        private Date date;
+        private String message;
 
         @Override
         public String getHash() {
@@ -159,6 +162,24 @@ public class BitbucketServerPushEvent implements BitbucketPushEvent{
 
         public void setHash(String hash) {
             this.hash = hash;
+        }
+
+        @Override
+        public Date getDate() {
+            return date;
+        }
+
+        public void setDate(Date date) {
+            this.date = date;
+        }
+
+        @Override
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
         }
     }
 

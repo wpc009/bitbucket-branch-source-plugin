@@ -29,7 +29,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketBranch;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BitbucketCloudBranch implements BitbucketBranch {
+public class BitbucketCloudBranch extends BitbucketBranch {
 
     @JsonProperty("raw_node")
     private String rawNode;
@@ -48,7 +48,6 @@ public class BitbucketCloudBranch implements BitbucketBranch {
     }
 
     @Override
-    
     public String getRawNode() {
         return rawNode;
     }
@@ -65,5 +64,7 @@ public class BitbucketCloudBranch implements BitbucketBranch {
     public void setName(String name) {
         this.name = name;
     }
+
+
 
 }

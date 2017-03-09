@@ -25,7 +25,9 @@ package com.cloudbees.jenkins.plugins.bitbucket.hooks;
 
 import com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMNavigator;
 import com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMSource;
+import com.cloudbees.jenkins.plugins.bitbucket.BitbucketTagSCMHead;
 import com.cloudbees.jenkins.plugins.bitbucket.BranchSCMHead;
+import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketBranch;
 import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketHref;
 import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketPushEvent;
 import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketRepositoryType;
@@ -35,7 +37,9 @@ import com.cloudbees.jenkins.plugins.bitbucket.server.client.BitbucketServerWebh
 
 import com.cloudbees.jenkins.plugins.bitbucket.server.events.BitbucketServerPushEvent;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.scm.RepositoryBrowser;
 import hudson.scm.SCM;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -44,6 +48,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import jenkins.plugins.git.AbstractGitSCMSource;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMHead;
@@ -75,7 +80,7 @@ public class PushHookProcessor extends HookProcessor {
                     scmSourceReIndex(owner, repository);
                 } else {
                     SCMHeadEvent.Type type = null;
-                    for (BitbucketPushEvent.Change change: push.getChanges()) {
+                    for (BitbucketPushEvent.Change change : push.getChanges()) {
                         if ((type == null || type == SCMEvent.Type.CREATED) && change.isCreated()) {
                             type = SCMEvent.Type.CREATED;
                         } else if ((type == null || type == SCMEvent.Type.REMOVED) && change.isClosed()) {
@@ -158,11 +163,31 @@ public class PushHookProcessor extends HookProcessor {
                                 return Collections.emptyMap();
                             }
                             Map<SCMHead, SCMRevision> result = new HashMap<>();
-                            for (BitbucketPushEvent.Change change: getPayload().getChanges()) {
+                            for (BitbucketPushEvent.Change change : getPayload().getChanges()) {
+
+
                                 if (change.isClosed()) {
-                                    result.put(new BranchSCMHead(change.getOld().getName(), type), null);
+                                    switch (change.getOld().getType()) {
+                                        case "tag":
+                                            result.put(new BitbucketTagSCMHead(change.getOld().getName(), change.getOld().getTarget().getDate().getTime(),change.getOld().getTarget().getHash()), null);
+                                            break;
+                                        case "branch":
+                                            result.put(new BranchSCMHead(change.getOld().getName(), type), null);
+                                            break;
+                                        default:
+                                            break;
+
+                                    }
                                 } else {
-                                    BranchSCMHead head = new BranchSCMHead(change.getNew().getName(), type);
+                                    SCMHead head = new BranchSCMHead(change.getNew().getName(), type);
+                                    switch (change.getNew().getType()) {
+                                        case "tag":
+                                            head = new BitbucketTagSCMHead(change.getNew().getName(),change.getNew().getTarget().getDate().getTime(),change.getNew().getTarget().getHash());
+                                            break;
+                                        default:
+                                            break;
+                                    }
+
                                     switch (type) {
                                         case GIT:
                                             result.put(head, new AbstractGitSCMSource.SCMRevisionImpl(head, change.getNew().getTarget().getHash()));
