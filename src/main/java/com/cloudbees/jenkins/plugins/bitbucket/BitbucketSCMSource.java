@@ -328,9 +328,43 @@ public class BitbucketSCMSource extends SCMSource {
                 retrievePullRequests(criteria, observer, listener);
             }
         } else {
+            retrieveReleaseTags(criteria,observer,listener);
             retrieveBranches(criteria, observer, listener);
             retrievePullRequests(criteria, observer, listener);
         }
+    }
+
+    private void retrieveReleaseTags(SCMSourceCriteria criteria, SCMHeadObserver observer, final TaskListener listener)
+        throws IOException, InterruptedException{
+        String fullName = repoOwner + "/" + repository;
+        listener.getLogger().format("Looking up %s for tags",fullName);
+        final BitbucketApi bitbucket = buildBitbucketClient();
+        final String defaultBranch = bitbucket.getDefaultBranch();
+        if (bitbucket.isPrivate()){
+            Set<SCMHead> includes = observer.getIncludes();
+            List<? extends BitbucketTag> tags = bitbucket.getTags();
+            for(BitbucketTag tag:tags) {
+                if (tag.getBranches() != null && tag.getBranches().contains(defaultBranch) || defaultBranch.equals(tag.getBranch()))
+                {
+                    SCMHead head = new BitbucketTagSCMHead(tag.getName(),tag.getDate() != null ? tag.getDate().getTime():System.currentTimeMillis(),tag.getHash());
+                    if(includes != null && !includes.contains(head)){
+                        continue;
+                    }
+                    listener.getLogger().println("Checking tag " + tag.getName() + " from " + fullName);
+                    observe(criteria, observer, listener, repoOwner, repository, defaultBranch,
+                            tag.getHash(),
+                            head
+                    );
+                    if (!observer.isObserving()) {
+                        break;
+                    }
+
+                }
+            }
+
+
+        }
+
     }
 
     private void retrievePullRequests(SCMSourceCriteria criteria, SCMHeadObserver observer, final TaskListener listener)
@@ -463,6 +497,7 @@ public class BitbucketSCMSource extends SCMSource {
             };
 
             if ("tag".equals(target.getType())) {
+                String defaultBranch = bitbucket.getDefaultBranch();
                 isObserve = true;
                 head = new BitbucketTagSCMHead(
                         target.getName(),
@@ -474,6 +509,13 @@ public class BitbucketSCMSource extends SCMSource {
                 for(BitbucketTag remoteTag : bitbucket.getTags()){
                     if(remoteTag.getName().equals(target.getName())){
                         branchName = remoteTag.getBranch();
+                        if(branchName == null && remoteTag.getBranches() != null && !remoteTag.getBranches().isEmpty()){
+                            if(remoteTag.getBranches().contains(defaultBranch)){
+                                branchName = defaultBranch;
+                            }else{
+                                branchName = remoteTag.getBranches().get(0);
+                            }
+                        }
                         break _REMOTE_TAGS;
                     }
                 }
